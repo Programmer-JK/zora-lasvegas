@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 const CASINO_BG = [
@@ -140,7 +140,7 @@ function Visual({ step }: { step: number }) {
       return (
         <div className="flex flex-col gap-2 w-full max-w-xs">
           {[
-            { label: '2인', colored: 4, white: 4, delay: 0 },
+            { label: '2인', colored: 4, white: 2, delay: 0 },
             { label: '3–4인', colored: 6, white: 2, delay: 120 },
             { label: '5인', colored: 8, white: 0, delay: 240 },
           ].map((row) => (
@@ -243,6 +243,16 @@ function Visual({ step }: { step: number }) {
 
 export default function RulesPage() {
   const [step, setStep] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio('/rule.mp3');
+    audio.loop = true;
+    audio.volume = 0.4;
+    audioRef.current = audio;
+    audio.play().catch(() => {});
+    return () => { audio.pause(); audio.src = ''; };
+  }, []);
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;
 

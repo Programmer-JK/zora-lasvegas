@@ -25,7 +25,7 @@ function getColoredDicePerPlayer(playerCount: number): number {
 }
 
 function getWhiteDicePerPlayer(playerCount: number): number {
-  if (playerCount === 2) return 4;
+  if (playerCount === 2) return 2;
   if (playerCount <= 4) return 2;
   return 0; // 5 players: no white dice
 }
