@@ -146,8 +146,8 @@ export function rollDice(state: GameState): GameState {
     Math.floor(Math.random() * 6) + 1
   );
 
-  // Available choices based on colored dice only
-  const uniqueValues = [...new Set(rolled)];
+  // Available choices: colored dice values + white dice values
+  const uniqueValues = [...new Set([...rolled, ...rolledWhite])];
 
   const whitePart = rolledWhite.length > 0 ? ` + 흰색 ${rolledWhite.length}개` : '';
   return {
@@ -165,9 +165,10 @@ export function chooseCasino(state: GameState, casinoId: number): GameState {
 
   const player = state.players[state.currentPlayerIndex];
   const coloredCount = state.rolledDice.filter((v) => v === casinoId).length;
-  const whiteCount = state.rolledWhiteDice.filter((v) => v === casinoId).length;
+  const whiteMatchCount = state.rolledWhiteDice.filter((v) => v === casinoId).length;
 
-  if (coloredCount === 0) return state;
+  // Must have at least colored or white dice matching this casino
+  if (coloredCount === 0 && whiteMatchCount === 0) return state;
 
   // Place colored dice at chosen casino
   let newCasinos = state.casinos.map((casino) => {
@@ -188,36 +189,43 @@ export function chooseCasino(state: GameState, casinoId: number): GameState {
     };
   });
 
-  // Place white dice at chosen casino (as WHITE_PLAYER_ID)
-  if (whiteCount > 0) {
+  // Place ALL white dice at their respective casinos (each die goes to its own number)
+  const whiteByCasino: Record<number, number> = {};
+  for (const v of state.rolledWhiteDice) {
+    whiteByCasino[v] = (whiteByCasino[v] ?? 0) + 1;
+  }
+  for (const [val, count] of Object.entries(whiteByCasino)) {
+    const targetId = Number(val);
     newCasinos = newCasinos.map((casino) => {
-      if (casino.id !== casinoId) return casino;
+      if (casino.id !== targetId) return casino;
       const existing = casino.placedDice.find((d) => d.playerId === WHITE_PLAYER_ID);
       if (existing) {
         return {
           ...casino,
           placedDice: casino.placedDice.map((d) =>
-            d.playerId === WHITE_PLAYER_ID ? { ...d, count: d.count + whiteCount } : d
+            d.playerId === WHITE_PLAYER_ID ? { ...d, count: d.count + count } : d
           ),
         };
       }
       return {
         ...casino,
-        placedDice: [...casino.placedDice, { playerId: WHITE_PLAYER_ID, count: whiteCount }],
+        placedDice: [...casino.placedDice, { playerId: WHITE_PLAYER_ID, count }],
       };
     });
   }
 
+  const totalWhiteUsed = state.rolledWhiteDice.length;
   const newPlayers = state.players.map((p) =>
     p.id === player.id
-      ? { ...p, diceCount: p.diceCount - coloredCount, whiteDiceCount: p.whiteDiceCount - whiteCount }
+      ? { ...p, diceCount: p.diceCount - coloredCount, whiteDiceCount: p.whiteDiceCount - totalWhiteUsed }
       : p
   );
 
   // Round is over when all players have 0 colored dice
   const roundOver = newPlayers.every((p) => p.diceCount === 0);
 
-  const whitePart = whiteCount > 0 ? ` (흰색 ${whiteCount}개 포함)` : '';
+  const whitePart = totalWhiteUsed > 0 ? ` + 흰색 ${totalWhiteUsed}개 자동배치` : '';
+  const coloredPart = coloredCount > 0 ? `주사위 ${coloredCount}개` : '흰색 주사위만';
   const nextState: GameState = {
     ...state,
     casinos: newCasinos,
@@ -225,7 +233,7 @@ export function chooseCasino(state: GameState, casinoId: number): GameState {
     rolledDice: [],
     rolledWhiteDice: [],
     availableChoices: [],
-    lastAction: `${player.name}이(가) 카지노 ${casinoId}에 주사위 ${coloredCount}개${whitePart}를 놓았습니다.`,
+    lastAction: `${player.name}이(가) 카지노 ${casinoId}에 ${coloredPart}${whitePart}를 놓았습니다.`,
   };
 
   if (roundOver) {

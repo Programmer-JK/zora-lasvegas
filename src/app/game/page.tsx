@@ -208,32 +208,38 @@ function GameContent() {
         </p>
 
         {/* Grouped dice buttons (choosing phase, after modal closed) */}
-        {gameState.phase === 'choosing' && !showRollModal && gameState.rolledDice.length > 0 && (
+        {gameState.phase === 'choosing' && !showRollModal && gameState.availableChoices.length > 0 && (
           <div className="mb-4">
             <p className="text-center text-white/40 text-xs mb-2">
               굴린 주사위 — 카지노 번호를 선택하세요
             </p>
             <div className="flex justify-center gap-2 flex-wrap">
-              {Object.entries(diceGroups).map(([val, count]) => {
-                const whiteCount = whiteDiceGroups[Number(val)] ?? 0;
+              {gameState.availableChoices.map((val) => {
+                const count = diceGroups[val] ?? 0;
+                const whiteCount = whiteDiceGroups[val] ?? 0;
+                const isWhiteOnly = count === 0;
                 return (
                   <button
                     key={val}
-                    onClick={() => handleChoose(Number(val))}
+                    onClick={() => handleChoose(val)}
                     className={[
                       'flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-150',
-                      gameState.availableChoices.includes(Number(val))
-                        ? `${cc.light} ${cc.border} border hover:scale-105 active:scale-95`
-                        : 'bg-white/5 border-white/10 opacity-40',
+                      isWhiteOnly
+                        ? 'bg-white/10 border-white/30 hover:scale-105 active:scale-95'
+                        : `${cc.light} ${cc.border} border hover:scale-105 active:scale-95`,
                     ].join(' ')}
                   >
-                    <Dice value={Number(val)} color={currentPlayer.color} size="sm" />
-                    <span className="text-black font-bold text-sm">×{count}</span>
+                    {!isWhiteOnly && (
+                      <>
+                        <Dice value={val} color={currentPlayer.color} size="sm" />
+                        <span className="text-black font-bold text-sm">×{count}</span>
+                      </>
+                    )}
                     {whiteCount > 0 && (
                       <>
-                        <span className="text-white/40 text-xs">+</span>
-                        <Dice value={Number(val)} color="white" size="sm" />
-                        <span className="text-black text-sm">×{whiteCount}</span>
+                        {!isWhiteOnly && <span className="text-white/40 text-xs">+</span>}
+                        <Dice value={val} color="white" size="sm" />
+                        <span className={`font-bold text-sm ${isWhiteOnly ? 'text-white' : 'text-black'}`}>×{whiteCount}</span>
                       </>
                     )}
                   </button>

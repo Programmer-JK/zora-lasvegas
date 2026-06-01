@@ -35,7 +35,7 @@ export default function PlayerPanel({ players, currentPlayerId }: PlayerPanelPro
               <p className={`text-xs ${isActive ? 'text-gray-600' : 'text-white/50'}`}>
                 <span className={cc.text}>⚀</span> {player.diceCount}
                 {player.whiteDiceCount > 0 && (
-                  <span className={isActive ? 'text-gray-400' : 'text-white/40'}> <span className="text-gray-300">⚀</span>W×{player.whiteDiceCount}</span>
+                  <span className={isActive ? 'text-gray-400' : 'text-white/40'}> <span className="text-gray-500">⚀</span> {player.whiteDiceCount}</span>
                 )}
                 {' '}&nbsp;💰 {(player.totalMoney / 10000).toFixed(0)}만
               </p>
