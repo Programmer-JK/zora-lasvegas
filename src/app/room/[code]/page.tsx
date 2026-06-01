@@ -129,7 +129,7 @@ export default function RoomPage() {
                     <span className="text-amber-400 text-xs font-bold">HOST</span>
                   )}
                   <span className="text-white/30 text-xs">{colorInfo?.label}</span>
-                  <span className="text-lg">{['⚀','⚁','⚂','⚃','⚄','⚅'][i]}</span>
+                  <span className={`text-lg ${isMe ? cc.text : 'text-white/40'}`}>{['⚀','⚁','⚂','⚃','⚄','⚅'][i]}</span>
                 </div>
               </div>
             );
