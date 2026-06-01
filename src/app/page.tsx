@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PlayerColor, PLAYER_COLORS } from '@/lib/types';
@@ -350,9 +350,40 @@ function OnlinePlayTab() {
 
 export default function Home() {
   const [tab, setTab] = useState<'local' | 'online'>('local');
+  const [musicOn, setMusicOn] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio('/opening.mp3');
+    audio.loop = true;
+    audio.volume = 0.4;
+    audioRef.current = audio;
+    audio.play().catch(() => setMusicOn(false));
+    return () => { audio.pause(); audio.src = ''; };
+  }, []);
+
+  const toggleMusic = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (musicOn) {
+      audio.pause();
+    } else {
+      audio.play().catch(() => {});
+    }
+    setMusicOn((prev) => !prev);
+  };
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#0f0f1a] via-[#1a1020] to-[#0a0a14] px-4 py-10">
+      {/* Music toggle */}
+      <button
+        onClick={toggleMusic}
+        className="fixed top-4 right-4 z-50 w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-lg hover:bg-white/20 transition-all"
+        title={musicOn ? '음악 끄기' : '음악 켜기'}
+      >
+        {musicOn ? '🎵' : '🔇'}
+      </button>
+
       {/* Header */}
       <div className="text-center mb-8 float">
         <div className="text-7xl mb-3">🎲</div>
