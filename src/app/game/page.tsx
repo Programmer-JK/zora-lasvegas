@@ -13,6 +13,7 @@ import {
   scoreRound,
   getColorClasses,
 } from '@/lib/gameLogic';
+import { playDiceRoll } from '@/lib/sounds';
 import Dice from '@/components/Dice';
 import CasinoCard from '@/components/CasinoCard';
 import PlayerPanel from '@/components/PlayerPanel';
@@ -43,6 +44,7 @@ function GameContent() {
 
   const handleRoll = useCallback(() => {
     if (!gameState || gameState.phase !== 'rolling') return;
+    playDiceRoll();
     const next = rollDice(gameState);
     setGameState(next);
     setShowRollModal(true);
