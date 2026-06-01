@@ -310,7 +310,7 @@ export default function OnlineGamePage() {
         </p>
 
         {/* Grouped dice buttons */}
-        {gameState.phase === 'choosing' && !showRollModal && gameState.rolledDice.length > 0 && (
+        {gameState.phase === 'choosing' && !showRollModal && gameState.availableChoices.length > 0 && (
           <div className="mb-4">
             <p className="text-center text-white/40 text-xs mb-2">
               {isMyTurn
