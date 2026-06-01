@@ -291,7 +291,7 @@ function GameContent() {
           {gameState.phase === 'rolling' && (
             <button
               onClick={handleRoll}
-              disabled={currentPlayer.diceCount === 0}
+              disabled={currentPlayer.diceCount === 0 && currentPlayer.whiteDiceCount === 0}
               className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-black bg-amber-400 hover:bg-amber-300 hover:scale-105 active:scale-95 pulse-glow transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <span className="text-xl">🎲</span>

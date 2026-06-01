@@ -137,7 +137,7 @@ export function createInitialState(
 
 export function rollDice(state: GameState): GameState {
   const player = state.players[state.currentPlayerIndex];
-  if (player.diceCount === 0 || state.phase !== 'rolling') return state;
+  if ((player.diceCount === 0 && player.whiteDiceCount === 0) || state.phase !== 'rolling') return state;
 
   const rolled: number[] = Array.from({ length: player.diceCount }, () =>
     Math.floor(Math.random() * 6) + 1
@@ -146,8 +146,8 @@ export function rollDice(state: GameState): GameState {
     Math.floor(Math.random() * 6) + 1
   );
 
-  // Available choices: colored dice values + white dice values
-  const uniqueValues = [...new Set([...rolled, ...rolledWhite])];
+  // 컬러 주사위 있으면 컬러 기준, 없으면 흰색 기준으로 선택지 결정 (흰색은 단독 선택 불가)
+  const uniqueValues = rolled.length > 0 ? [...new Set(rolled)] : [...new Set(rolledWhite)];
 
   const whitePart = rolledWhite.length > 0 ? ` + 흰색 ${rolledWhite.length}개` : '';
   return {
@@ -215,8 +215,8 @@ export function chooseCasino(state: GameState, casinoId: number): GameState {
       : p
   );
 
-  // Round is over when all players have 0 colored dice
-  const roundOver = newPlayers.every((p) => p.diceCount === 0);
+  // Round is over when all players have placed ALL dice (colored + white)
+  const roundOver = newPlayers.every((p) => p.diceCount === 0 && p.whiteDiceCount === 0);
 
   const whitePart = whiteMatchCount > 0 ? ` + 흰색 ${whiteMatchCount}개` : '';
   const coloredPart = coloredCount > 0 ? `주사위 ${coloredCount}개` : '흰색 주사위만';
@@ -234,9 +234,9 @@ export function chooseCasino(state: GameState, casinoId: number): GameState {
     return { ...nextState, phase: 'scoring' };
   }
 
-  // Advance to next player who still has colored dice
+  // Advance to next player who still has dice (colored or white)
   let nextIndex = (state.currentPlayerIndex + 1) % state.players.length;
-  while (newPlayers[nextIndex].diceCount === 0) {
+  while (newPlayers[nextIndex].diceCount === 0 && newPlayers[nextIndex].whiteDiceCount === 0) {
     nextIndex = (nextIndex + 1) % state.players.length;
   }
 
