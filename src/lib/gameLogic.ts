@@ -4,7 +4,6 @@ import {
   Casino,
   MoneyCard,
   PlayerColor,
-  DICE_COUNT_PER_PLAYER,
   TOTAL_ROUNDS,
   WHITE_PLAYER_ID,
 } from './types';
@@ -146,8 +145,8 @@ export function rollDice(state: GameState): GameState {
     Math.floor(Math.random() * 6) + 1
   );
 
-  // 컬러 주사위 있으면 컬러 기준, 없으면 흰색 기준으로 선택지 결정 (흰색은 단독 선택 불가)
-  const uniqueValues = rolled.length > 0 ? [...new Set(rolled)] : [...new Set(rolledWhite)];
+  // 컬러+흰색 모두 선택지로 허용
+  const uniqueValues = [...new Set([...rolled, ...rolledWhite])];
 
   const whitePart = rolledWhite.length > 0 ? ` + 흰색 ${rolledWhite.length}개` : '';
   return {
