@@ -1,8 +1,8 @@
 export function playDiceRoll() {
   if (typeof window === 'undefined') return;
   try {
-    const audio = new Audio('/role-dice.mp3');
-    audio.play().catch(() => {});
+    const audio = new Audio('/roll-dice.mp3');
+    audio.play().catch(() => { });
   } catch {
     // Silently ignore if Audio is not available
   }

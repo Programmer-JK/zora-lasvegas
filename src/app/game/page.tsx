@@ -27,6 +27,7 @@ function GameContent() {
   const [showRoundStart, setShowRoundStart] = useState(true);
   const [showRollModal, setShowRollModal] = useState(false);
   const [showScoringModal, setShowScoringModal] = useState(false);
+  const [scoredState, setScoredState] = useState<GameState | null>(null);
 
   useEffect(() => {
     const setupParam = searchParams.get('setup');
@@ -62,15 +63,21 @@ function GameContent() {
     [gameState]
   );
 
-  const handleScoring = useCallback(() => {
+  const handleCalculate = useCallback(() => {
     if (!gameState) return;
     const next = scoreRound(gameState);
-    setGameState(next);
+    setScoredState(next);
+  }, [gameState]);
+
+  const handleProceed = useCallback(() => {
+    if (!scoredState) return;
+    setGameState(scoredState);
+    setScoredState(null);
     setShowScoringModal(false);
-    if (next.phase !== 'gameOver') {
+    if (scoredState.phase !== 'gameOver') {
       setShowRoundStart(true);
     }
-  }, [gameState]);
+  }, [scoredState]);
 
   if (!gameState) {
     return (
