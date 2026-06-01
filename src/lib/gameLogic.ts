@@ -19,6 +19,12 @@ const MONEY_CARD_VALUES = [
   60000, 70000, 80000, 90000,
 ];
 
+function getColoredDicePerPlayer(playerCount: number): number {
+  if (playerCount === 2) return 4;
+  if (playerCount <= 4) return 6;
+  return 8; // 5 players: 8 colored dice, no white
+}
+
 function getWhiteDicePerPlayer(playerCount: number): number {
   if (playerCount === 2) return 4;
   if (playerCount <= 4) return 2;
@@ -84,6 +90,7 @@ export function createInitialState(
   playerSetup: { name: string; color: PlayerColor; clientId?: string }[]
 ): GameState {
   const playerCount = playerSetup.length;
+  const coloredDice = getColoredDicePerPlayer(playerCount);
   const whiteDice = getWhiteDicePerPlayer(playerCount);
 
   const players: Player[] = playerSetup.map((p, i) => ({
@@ -91,7 +98,7 @@ export function createInitialState(
     name: p.name,
     color: p.color,
     clientId: p.clientId,
-    diceCount: DICE_COUNT_PER_PLAYER,
+    diceCount: coloredDice,
     whiteDiceCount: whiteDice,
     totalMoney: 0,
   }));
@@ -275,10 +282,11 @@ export function scoreRound(state: GameState): GameState {
   const nextRound = state.round + 1;
 
   // Reset for next round
+  const coloredDice = getColoredDicePerPlayer(state.players.length);
   const whiteDice = getWhiteDicePerPlayer(state.players.length);
   const resetPlayers = newPlayers.map((p) => ({
     ...p,
-    diceCount: DICE_COUNT_PER_PLAYER,
+    diceCount: coloredDice,
     whiteDiceCount: whiteDice,
   }));
 

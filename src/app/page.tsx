@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { PlayerColor, PLAYER_COLORS } from '@/lib/types';
 import {
   generateRoomCode,
@@ -74,11 +75,10 @@ function LocalPlayTab() {
             <button
               key={n}
               onClick={() => handlePlayerCountChange(n)}
-              className={`w-12 h-12 rounded-xl font-bold text-lg transition-all duration-200 ${
-                playerCount === n
-                  ? 'bg-amber-400 text-black scale-110 shadow-lg shadow-amber-400/40'
-                  : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
-              }`}
+              className={`w-12 h-12 rounded-xl font-bold text-lg transition-all duration-200 ${playerCount === n
+                ? 'bg-amber-400 text-black scale-110 shadow-lg shadow-amber-400/40'
+                : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
+                }`}
             >
               {n}
             </button>
@@ -103,7 +103,7 @@ function LocalPlayTab() {
                   maxLength={12}
                 />
               </div>
-              <div className="flex gap-1.5 flex-wrap pl-1">
+              <div className="flex gap-2.5 flex-wrap pl-1">
                 {PLAYER_COLORS.map((c) => {
                   const isUsedByOther = usedColors.includes(c.color) && c.color !== player.color;
                   return (
@@ -112,13 +112,12 @@ function LocalPlayTab() {
                       onClick={() => !isUsedByOther && handleColorChange(index, c.color)}
                       disabled={isUsedByOther}
                       title={c.label}
-                      className={`w-6 h-6 rounded-full transition-all duration-150 ${c.bg} ${
-                        player.color === c.color
-                          ? 'ring-2 ring-white ring-offset-1 ring-offset-transparent scale-125'
-                          : isUsedByOther
+                      className={`w-6 h-6 rounded-full transition-all duration-150 ${c.bg} ${player.color === c.color
+                        ? 'ring-2 ring-white ring-offset-1 ring-offset-transparent scale-125'
+                        : isUsedByOther
                           ? 'opacity-20 cursor-not-allowed'
                           : 'opacity-60 hover:opacity-100 hover:scale-110'
-                      }`}
+                        }`}
                     />
                   );
                 })}
@@ -234,13 +233,12 @@ function OnlinePlayTab() {
           <button
             key={t}
             onClick={() => { setSubTab(t); setError(''); }}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
-              subTab === t
-                ? 'bg-amber-400 text-black shadow'
-                : 'text-white/50 hover:text-white'
-            }`}
+            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${subTab === t
+              ? 'bg-amber-400 text-black shadow'
+              : 'text-white/50 hover:text-white'
+              }`}
           >
-            {t === 'create' ? '🏠 방 만들기' : '🚪 방 참가하기'}
+            {t === 'create' ? '방 만들기' : '방 참가하기'}
           </button>
         ))}
       </div>
@@ -256,11 +254,10 @@ function OnlinePlayTab() {
             value={joinCode}
             onChange={(e) => handleJoinCodeChange(e.target.value)}
             placeholder="XXXXXX"
-            className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white text-lg font-black tracking-[0.3em] text-center outline-none transition-colors placeholder:text-white/20 ${
-              roomStatus === 'found' ? 'border-green-500' :
+            className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white text-lg font-black tracking-[0.3em] text-center outline-none transition-colors placeholder:text-white/20 ${roomStatus === 'found' ? 'border-green-500' :
               roomStatus === 'notfound' ? 'border-red-500' :
-              'border-white/20 focus:border-amber-400'
-            }`}
+                'border-white/20 focus:border-amber-400'
+              }`}
             maxLength={6}
           />
           {/* 방 미리보기 */}
@@ -322,13 +319,12 @@ function OnlinePlayTab() {
                 onClick={() => !isTaken && setColor(c.color)}
                 disabled={isTaken}
                 title={isTaken ? '이미 선택됨' : c.label}
-                className={`w-10 h-10 rounded-full transition-all duration-150 ${c.bg} ${
-                  isTaken
-                    ? 'opacity-20 cursor-not-allowed'
-                    : color === c.color
+                className={`w-10 h-10 rounded-full transition-all duration-150 ${c.bg} ${isTaken
+                  ? 'opacity-20 cursor-not-allowed'
+                  : color === c.color
                     ? 'ring-2 ring-white scale-125 shadow-lg'
                     : 'opacity-50 hover:opacity-80 hover:scale-110'
-                }`}
+                  }`}
               />
             );
           })}
@@ -344,7 +340,7 @@ function OnlinePlayTab() {
         disabled={loading}
         className="w-full py-4 rounded-2xl font-black text-lg tracking-widest uppercase bg-gradient-to-r from-amber-500 to-yellow-400 text-black hover:from-amber-400 hover:to-yellow-300 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/30 pulse-glow disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
-        {loading ? '처리 중...' : subTab === 'create' ? '방 만들기 🏠' : '참가하기 🚪'}
+        {loading ? '처리 중...' : subTab === 'create' ? '방 만들기' : '참가하기'}
       </button>
     </div>
   );
@@ -362,27 +358,31 @@ export default function Home() {
         <div className="text-7xl mb-3">🎲</div>
         <h1 className="text-5xl font-black tracking-widest gold-text mb-2">LAS VEGAS</h1>
         <p className="text-amber-300/60 text-sm tracking-widest uppercase">The Dice Game</p>
+        <Link
+          href="/rules"
+          className="mt-3 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-amber-400/30 bg-amber-400/8 text-amber-300/70 text-xs font-bold hover:bg-amber-400/20 hover:border-amber-400/60 hover:text-amber-300 transition-all duration-200"
+        >
+          📖 게임 규칙 보기
+        </Link>
       </div>
 
       {/* Mode tabs */}
       <div className="flex rounded-2xl bg-white/5 border border-white/10 p-1 mb-6 w-full max-w-lg">
         <button
           onClick={() => setTab('local')}
-          className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${
-            tab === 'local'
-              ? 'bg-white/15 text-white shadow'
-              : 'text-white/40 hover:text-white/70'
-          }`}
+          className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${tab === 'local'
+            ? 'bg-white/15 text-white shadow'
+            : 'text-white/40 hover:text-white/70'
+            }`}
         >
           🖥️ 로컬 플레이
         </button>
         <button
           onClick={() => setTab('online')}
-          className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${
-            tab === 'online'
-              ? 'bg-white/15 text-white shadow'
-              : 'text-white/40 hover:text-white/70'
-          }`}
+          className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${tab === 'online'
+            ? 'bg-white/15 text-white shadow'
+            : 'text-white/40 hover:text-white/70'
+            }`}
         >
           🌐 온라인 플레이
         </button>
@@ -392,7 +392,7 @@ export default function Home() {
 
       {/* Rules hint */}
       <div className="mt-8 max-w-lg text-center text-white/30 text-xs leading-relaxed">
-        <p>🏨 6개의 카지노 | 🎲 플레이어당 주사위 8개 | 💰 4라운드</p>
+        <p>🏨 6개의 카지노 | 🎲 인원수별 주사위 4–8개 | 💰 4라운드</p>
         <p className="mt-1">같은 숫자 주사위를 골라 카지노에 배치하고 가장 많은 돈을 모아 우승하세요!</p>
       </div>
     </main>

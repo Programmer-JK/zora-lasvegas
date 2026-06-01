@@ -102,6 +102,15 @@ body {
   animation: card-deal-in 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
+@keyframes step-in {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.step-in {
+  animation: step-in 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
 .gold-text {
   background: linear-gradient(90deg, #f59e0b, #fde68a, #f59e0b, #fbbf24);
   background-size: 200% auto;
