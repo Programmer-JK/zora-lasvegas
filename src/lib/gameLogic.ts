@@ -1,0 +1,329 @@
+import {
+  GameState,
+  Player,
+  Casino,
+  MoneyCard,
+  PlayerColor,
+  DICE_COUNT_PER_PLAYER,
+  TOTAL_ROUNDS,
+  WHITE_PLAYER_ID,
+} from './types';
+
+// Money card pool used in the game
+const MONEY_CARD_VALUES = [
+  10000, 10000, 10000, 10000, 10000,
+  20000, 20000, 20000, 20000,
+  30000, 30000, 30000,
+  40000, 40000,
+  50000, 50000,
+  60000, 70000, 80000, 90000,
+];
+
+function getWhiteDicePerPlayer(playerCount: number): number {
+  if (playerCount === 2) return 4;
+  if (playerCount <= 4) return 2;
+  return 0; // 5 players: no white dice
+}
+
+// Extra neutral dice rolled by first player before each round in 3-player games
+function getExtraNeutralDiceCount(playerCount: number): number {
+  return playerCount === 3 ? 2 : 0;
+}
+
+function placeNeutralDiceOnCasinos(casinos: Casino[], diceRolls: number[]): Casino[] {
+  const groups: Record<number, number> = {};
+  for (const v of diceRolls) groups[v] = (groups[v] ?? 0) + 1;
+
+  return casinos.map((casino) => {
+    const count = groups[casino.id] ?? 0;
+    if (count === 0) return casino;
+    const existing = casino.placedDice.find((d) => d.playerId === WHITE_PLAYER_ID);
+    if (existing) {
+      return {
+        ...casino,
+        placedDice: casino.placedDice.map((d) =>
+          d.playerId === WHITE_PLAYER_ID ? { ...d, count: d.count + count } : d
+        ),
+      };
+    }
+    return {
+      ...casino,
+      placedDice: [...casino.placedDice, { playerId: WHITE_PLAYER_ID, count }],
+    };
+  });
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function dealMoneyCards(): MoneyCard[][] {
+  const deck = shuffle(MONEY_CARD_VALUES.map((v) => ({ value: v })));
+  const casinos: MoneyCard[][] = Array.from({ length: 6 }, () => []);
+
+  // Each casino gets cards until the total >= 50000
+  for (let i = 0; i < 6; i++) {
+    let total = 0;
+    while (total < 50000 && deck.length > 0) {
+      const card = deck.pop()!;
+      casinos[i].push(card);
+      total += card.value;
+    }
+    // Sort descending so highest is first (top of pile)
+    casinos[i].sort((a, b) => b.value - a.value);
+  }
+  return casinos;
+}
+
+export function createInitialState(
+  playerSetup: { name: string; color: PlayerColor; clientId?: string }[]
+): GameState {
+  const playerCount = playerSetup.length;
+  const whiteDice = getWhiteDicePerPlayer(playerCount);
+
+  const players: Player[] = playerSetup.map((p, i) => ({
+    id: i,
+    name: p.name,
+    color: p.color,
+    clientId: p.clientId,
+    diceCount: DICE_COUNT_PER_PLAYER,
+    whiteDiceCount: whiteDice,
+    totalMoney: 0,
+  }));
+
+  const moneyCardPiles = dealMoneyCards();
+
+  let casinos: Casino[] = Array.from({ length: 6 }, (_, i) => ({
+    id: i + 1,
+    moneyCards: moneyCardPiles[i],
+    placedDice: [],
+  }));
+
+  let startMsg = '게임 시작! 첫 번째 플레이어가 주사위를 굴려주세요.';
+
+  // 3인 게임: 선플레이어가 2개의 추가 중립 주사위를 배치
+  const extraCount = getExtraNeutralDiceCount(playerCount);
+  if (extraCount > 0) {
+    const extraDice = Array.from({ length: extraCount }, () => Math.floor(Math.random() * 6) + 1);
+    casinos = placeNeutralDiceOnCasinos(casinos, extraDice);
+    startMsg = `게임 시작! 중립 주사위 사전 배치: [${extraDice.join(', ')}]`;
+  }
+
+  return {
+    players,
+    casinos,
+    currentPlayerIndex: 0,
+    round: 1,
+    totalRounds: TOTAL_ROUNDS,
+    phase: 'rolling',
+    rolledDice: [],
+    rolledWhiteDice: [],
+    availableChoices: [],
+    lastAction: startMsg,
+  };
+}
+
+export function rollDice(state: GameState): GameState {
+  const player = state.players[state.currentPlayerIndex];
+  if (player.diceCount === 0 || state.phase !== 'rolling') return state;
+
+  const rolled: number[] = Array.from({ length: player.diceCount }, () =>
+    Math.floor(Math.random() * 6) + 1
+  );
+  const rolledWhite: number[] = Array.from({ length: player.whiteDiceCount }, () =>
+    Math.floor(Math.random() * 6) + 1
+  );
+
+  // Available choices based on colored dice only
+  const uniqueValues = [...new Set(rolled)];
+
+  const whitePart = rolledWhite.length > 0 ? ` + 흰색 ${rolledWhite.length}개` : '';
+  return {
+    ...state,
+    rolledDice: rolled,
+    rolledWhiteDice: rolledWhite,
+    availableChoices: uniqueValues,
+    phase: 'choosing',
+    lastAction: `${player.name}이(가) 주사위 ${player.diceCount}개${whitePart}를 굴렸습니다.`,
+  };
+}
+
+export function chooseCasino(state: GameState, casinoId: number): GameState {
+  if (state.phase !== 'choosing') return state;
+
+  const player = state.players[state.currentPlayerIndex];
+  const coloredCount = state.rolledDice.filter((v) => v === casinoId).length;
+  const whiteCount = state.rolledWhiteDice.filter((v) => v === casinoId).length;
+
+  if (coloredCount === 0) return state;
+
+  // Place colored dice at chosen casino
+  let newCasinos = state.casinos.map((casino) => {
+    if (casino.id !== casinoId) return casino;
+
+    const existing = casino.placedDice.find((d) => d.playerId === player.id);
+    if (existing) {
+      return {
+        ...casino,
+        placedDice: casino.placedDice.map((d) =>
+          d.playerId === player.id ? { ...d, count: d.count + coloredCount } : d
+        ),
+      };
+    }
+    return {
+      ...casino,
+      placedDice: [...casino.placedDice, { playerId: player.id, count: coloredCount }],
+    };
+  });
+
+  // Place white dice at chosen casino (as WHITE_PLAYER_ID)
+  if (whiteCount > 0) {
+    newCasinos = newCasinos.map((casino) => {
+      if (casino.id !== casinoId) return casino;
+      const existing = casino.placedDice.find((d) => d.playerId === WHITE_PLAYER_ID);
+      if (existing) {
+        return {
+          ...casino,
+          placedDice: casino.placedDice.map((d) =>
+            d.playerId === WHITE_PLAYER_ID ? { ...d, count: d.count + whiteCount } : d
+          ),
+        };
+      }
+      return {
+        ...casino,
+        placedDice: [...casino.placedDice, { playerId: WHITE_PLAYER_ID, count: whiteCount }],
+      };
+    });
+  }
+
+  const newPlayers = state.players.map((p) =>
+    p.id === player.id
+      ? { ...p, diceCount: p.diceCount - coloredCount, whiteDiceCount: p.whiteDiceCount - whiteCount }
+      : p
+  );
+
+  // Round is over when all players have 0 colored dice
+  const roundOver = newPlayers.every((p) => p.diceCount === 0);
+
+  const whitePart = whiteCount > 0 ? ` (흰색 ${whiteCount}개 포함)` : '';
+  const nextState: GameState = {
+    ...state,
+    casinos: newCasinos,
+    players: newPlayers,
+    rolledDice: [],
+    rolledWhiteDice: [],
+    availableChoices: [],
+    lastAction: `${player.name}이(가) 카지노 ${casinoId}에 주사위 ${coloredCount}개${whitePart}를 놓았습니다.`,
+  };
+
+  if (roundOver) {
+    return { ...nextState, phase: 'scoring' };
+  }
+
+  // Advance to next player who still has colored dice
+  let nextIndex = (state.currentPlayerIndex + 1) % state.players.length;
+  while (newPlayers[nextIndex].diceCount === 0) {
+    nextIndex = (nextIndex + 1) % state.players.length;
+  }
+
+  return { ...nextState, currentPlayerIndex: nextIndex, phase: 'rolling' };
+}
+
+export function scoreRound(state: GameState): GameState {
+  const newPlayers = state.players.map((p) => ({ ...p }));
+  const newCasinos = state.casinos.map((c) => ({ ...c, moneyCards: [...c.moneyCards] }));
+
+  const winSummary: string[] = [];
+
+  for (const casino of newCasinos) {
+    if (casino.placedDice.length === 0 || casino.moneyCards.length === 0) continue;
+
+    // Sort by dice count descending
+    const sorted = [...casino.placedDice].sort((a, b) => b.count - a.count);
+
+    let cardIndex = 0;
+    let i = 0;
+
+    while (i < sorted.length && cardIndex < casino.moneyCards.length) {
+      const currentCount = sorted[i].count;
+      // Find all entries tied at this count
+      const tiedGroup = sorted.filter((d) => d.count === currentCount);
+
+      if (tiedGroup.length === 1) {
+        const card = casino.moneyCards[cardIndex];
+        if (tiedGroup[0].playerId === WHITE_PLAYER_ID) {
+          // Neutral wins: prize is discarded (nobody gets money)
+          winSummary.push(`카지노${casino.id}: 중립 주사위 획득 (무효)`);
+        } else {
+          const winner = newPlayers.find((p) => p.id === tiedGroup[0].playerId)!;
+          winner.totalMoney += card.value;
+          winSummary.push(`카지노${casino.id}: ${winner.name} +${(card.value / 10000).toFixed(0)}만원`);
+        }
+        cardIndex++;
+      }
+      // Tied players get nothing, skip their position
+      i += tiedGroup.length;
+    }
+  }
+
+  const isGameOver = state.round >= state.totalRounds;
+  const nextRound = state.round + 1;
+
+  // Reset for next round
+  const whiteDice = getWhiteDicePerPlayer(state.players.length);
+  const resetPlayers = newPlayers.map((p) => ({
+    ...p,
+    diceCount: DICE_COUNT_PER_PLAYER,
+    whiteDiceCount: whiteDice,
+  }));
+
+  const newMoneyCardPiles = dealMoneyCards();
+  let resetCasinos: Casino[] = newCasinos.map((c, i) => ({
+    ...c,
+    moneyCards: newMoneyCardPiles[i],
+    placedDice: [],
+  }));
+
+  // 3인 게임: 다음 라운드 시작 전 추가 중립 주사위 배치
+  let neutralMsg = '';
+  if (!isGameOver) {
+    const extraCount = getExtraNeutralDiceCount(state.players.length);
+    if (extraCount > 0) {
+      const extraDice = Array.from({ length: extraCount }, () => Math.floor(Math.random() * 6) + 1);
+      resetCasinos = placeNeutralDiceOnCasinos(resetCasinos, extraDice);
+      neutralMsg = ` | 중립 주사위: [${extraDice.join(', ')}]`;
+    }
+  }
+
+  const summaryMsg = winSummary.length > 0 ? winSummary.join(' | ') : '이번 라운드 수익 없음';
+
+  return {
+    ...state,
+    players: isGameOver ? newPlayers : resetPlayers,
+    casinos: isGameOver ? newCasinos : resetCasinos,
+    round: nextRound,
+    currentPlayerIndex: 0,
+    phase: isGameOver ? 'gameOver' : 'rolling',
+    rolledDice: [],
+    rolledWhiteDice: [],
+    availableChoices: [],
+    lastAction: summaryMsg + neutralMsg,
+  };
+}
+
+export function getColorClasses(color: string) {
+  const map: Record<string, { bg: string; text: string; border: string; light: string }> = {
+    red:    { bg: 'bg-red-500',    text: 'text-red-500',    border: 'border-red-500',    light: 'bg-red-100' },
+    blue:   { bg: 'bg-blue-500',   text: 'text-blue-500',   border: 'border-blue-500',   light: 'bg-blue-100' },
+    green:  { bg: 'bg-green-500',  text: 'text-green-500',  border: 'border-green-500',  light: 'bg-green-100' },
+    yellow: { bg: 'bg-yellow-400', text: 'text-yellow-600', border: 'border-yellow-400', light: 'bg-yellow-100' },
+    purple: { bg: 'bg-purple-500', text: 'text-purple-500', border: 'border-purple-500', light: 'bg-purple-100' },
+    orange: { bg: 'bg-orange-500', text: 'text-orange-500', border: 'border-orange-500', light: 'bg-orange-100' },
+  };
+  return map[color] ?? map['red'];
+}
