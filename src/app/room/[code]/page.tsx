@@ -113,23 +113,22 @@ export default function RoomPage() {
             return (
               <div
                 key={player.clientId}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${
-                  isMe
-                    ? `${cc.light} ${cc.border} border-2`
-                    : 'bg-white/5 border-white/10'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${isMe
+                  ? `${cc.light} ${cc.border} border-2`
+                  : 'bg-white/5 border-white/10'
+                  }`}
               >
                 <span className={`w-3 h-3 rounded-full flex-shrink-0 ${cc.bg}`} />
                 <span className={`font-bold text-sm flex-1 ${isMe ? cc.text : 'text-white/70'}`}>
                   {player.name}
-                  {isMe && <span className="text-white/40 font-normal"> (나)</span>}
+                  {isMe && <span className="text-black/50 font-normal"> (나)</span>}
                 </span>
                 <div className="flex items-center gap-1.5">
                   {isRoomHost && (
                     <span className="text-amber-400 text-xs font-bold">HOST</span>
                   )}
-                  <span className="text-white/30 text-xs">{colorInfo?.label}</span>
-                  <span className={`text-lg ${isMe ? cc.text : 'text-white/40'}`}>{['⚀','⚁','⚂','⚃','⚄','⚅'][i]}</span>
+                  <span className="text-black text-xs">{colorInfo?.label}</span>
+                  <span className={`text-lg ${isMe ? cc.text : 'text-white/40'}`}>{['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][i]}</span>
                 </div>
               </div>
             );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { GameState } from '@/lib/types';
 import {
@@ -9,6 +9,7 @@ import {
   scoreRound,
   getColorClasses,
 } from '@/lib/gameLogic';
+import { playDiceRoll } from '@/lib/sounds';
 import {
   subscribeRoom,
   updateGameState,
@@ -56,6 +57,24 @@ export default function OnlineGamePage() {
   const [showRollModal, setShowRollModal] = useState(false);
   const [showScoringModal, setShowScoringModal] = useState(false);
   const [isScoringInProgress, setIsScoringInProgress] = useState(false);
+  const [musicOn, setMusicOn] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio('/game.mp3');
+    audio.loop = true;
+    audio.volume = 0.4;
+    audioRef.current = audio;
+    audio.play().catch(() => setMusicOn(false));
+    return () => { audio.pause(); audio.src = ''; };
+  }, []);
+
+  const toggleMusic = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (musicOn) { audio.pause(); } else { audio.play().catch(() => {}); }
+    setMusicOn((prev) => !prev);
+  };
 
   useEffect(() => {
     const unsub = subscribeRoom(code, (room) => {
@@ -94,6 +113,7 @@ export default function OnlineGamePage() {
 
   const handleRoll = useCallback(async () => {
     if (!gameState || gameState.phase !== 'rolling' || !isMyTurn) return;
+    playDiceRoll();
     const next = rollDice(gameState);
     setGame(next);
     setShowRollModal(true);
@@ -220,7 +240,15 @@ export default function OnlineGamePage() {
           <h1 className="gold-text font-black text-lg tracking-widest">LAS VEGAS</h1>
           <p className="text-white/40 text-xs">라운드 {gameState.round} / {gameState.totalRounds}</p>
         </div>
-        <div className="text-white/30 text-xs font-mono">{code}</div>
+        <div className="flex items-center gap-2">
+          <span className="text-white/30 text-xs font-mono">{code}</span>
+          <button
+            onClick={toggleMusic}
+            className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-base hover:bg-white/20 transition-all"
+          >
+            {musicOn ? '🎵' : '🔇'}
+          </button>
+        </div>
       </header>
 
       {/* Player Panel */}
@@ -272,28 +300,36 @@ export default function OnlineGamePage() {
                 : `${currentPlayer.name}의 선택을 기다리는 중...`}
             </p>
             <div className="flex justify-center gap-2 flex-wrap">
-              {Object.entries(diceGroups).map(([val, count]) => {
-                const whiteCount = whiteDiceGroups[Number(val)] ?? 0;
-                const canSelect = isMyTurn && gameState.availableChoices.includes(Number(val));
+              {gameState.availableChoices.map((val) => {
+                const count = diceGroups[val] ?? 0;
+                const whiteCount = whiteDiceGroups[val] ?? 0;
+                const isWhiteOnly = count === 0;
+                const canSelect = isMyTurn;
                 return (
                   <button
                     key={val}
-                    onClick={() => canSelect && handleChoose(Number(val))}
+                    onClick={() => canSelect && handleChoose(val)}
                     disabled={!canSelect}
                     className={[
                       'flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-150',
                       canSelect
-                        ? `${cc.light} ${cc.border} border hover:scale-105 active:scale-95`
+                        ? isWhiteOnly
+                          ? 'bg-white/10 border-white/30 hover:scale-105 active:scale-95'
+                          : `${cc.light} ${cc.border} border hover:scale-105 active:scale-95`
                         : 'bg-white/5 border-white/10 opacity-40',
                     ].join(' ')}
                   >
-                    <Dice value={Number(val)} color={currentPlayer.color} size="sm" />
-                    <span className="text-black font-bold text-sm">×{count}</span>
+                    {!isWhiteOnly && (
+                      <>
+                        <Dice value={val} color={currentPlayer.color} size="sm" />
+                        <span className="text-black font-bold text-sm">×{count}</span>
+                      </>
+                    )}
                     {whiteCount > 0 && (
                       <>
-                        <span className="text-white/40 text-xs">+</span>
-                        <Dice value={Number(val)} color="white" size="sm" />
-                        <span className="text-black text-sm">×{whiteCount}</span>
+                        {!isWhiteOnly && <span className="text-white/40 text-xs">+</span>}
+                        <Dice value={val} color="white" size="sm" />
+                        <span className={`font-bold text-sm ${isWhiteOnly ? 'text-white' : 'text-black'}`}>×{whiteCount}</span>
                       </>
                     )}
                   </button>

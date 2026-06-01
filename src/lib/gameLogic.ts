@@ -170,9 +170,9 @@ export function chooseCasino(state: GameState, casinoId: number): GameState {
   // Must have at least colored or white dice matching this casino
   if (coloredCount === 0 && whiteMatchCount === 0) return state;
 
-  // Place colored dice at chosen casino
+  // Place colored dice at chosen casino (only if any)
   let newCasinos = state.casinos.map((casino) => {
-    if (casino.id !== casinoId) return casino;
+    if (casino.id !== casinoId || coloredCount === 0) return casino;
 
     const existing = casino.placedDice.find((d) => d.playerId === player.id);
     if (existing) {

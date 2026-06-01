@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   GameState,
@@ -28,6 +28,24 @@ function GameContent() {
   const [showRollModal, setShowRollModal] = useState(false);
   const [showScoringModal, setShowScoringModal] = useState(false);
   const [scoredState, setScoredState] = useState<GameState | null>(null);
+  const [musicOn, setMusicOn] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio('/game.mp3');
+    audio.loop = true;
+    audio.volume = 0.4;
+    audioRef.current = audio;
+    audio.play().catch(() => setMusicOn(false));
+    return () => { audio.pause(); audio.src = ''; };
+  }, []);
+
+  const toggleMusic = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (musicOn) { audio.pause(); } else { audio.play().catch(() => {}); }
+    setMusicOn((prev) => !prev);
+  };
 
   useEffect(() => {
     const setupParam = searchParams.get('setup');
@@ -175,7 +193,12 @@ function GameContent() {
           <h1 className="gold-text font-black text-lg tracking-widest">LAS VEGAS</h1>
           <p className="text-white/40 text-xs">라운드 {gameState.round} / {gameState.totalRounds}</p>
         </div>
-        <div className="w-16" />
+        <button
+          onClick={toggleMusic}
+          className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-base hover:bg-white/20 transition-all"
+        >
+          {musicOn ? '🎵' : '🔇'}
+        </button>
       </header>
 
       {/* Player Panel */}
