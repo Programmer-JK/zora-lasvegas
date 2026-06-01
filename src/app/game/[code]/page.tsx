@@ -59,6 +59,8 @@ export default function OnlineGamePage() {
   const [isScoringInProgress, setIsScoringInProgress] = useState(false);
   const [musicOn, setMusicOn] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const preScoringStateRef = useRef<GameState | null>(null);
+  const [roundEarnings, setRoundEarnings] = useState<{ name: string; color: string; earned: number; totalMoney: number }[] | null>(null);
 
   useEffect(() => {
     const audio = new Audio('/game.mp3');
@@ -89,14 +91,23 @@ export default function OnlineGamePage() {
           setShowScoringModal(false);
           setIsScoringInProgress(false);
         }
-        // scoring 단계 진입 시 모달 표시
+        // scoring 단계 진입 시 상태 저장 + 모달 표시
         if (gs.phase === 'scoring' && prev?.phase !== 'scoring') {
+          preScoringStateRef.current = gs;
           setShowScoringModal(true);
         }
-        // scoring 완료 후 모달 닫기 (다른 플레이어가 계산했을 때)
+        // scoring 완료 후 수익 표시 (다른 플레이어가 계산했을 때)
         if (prev?.phase === 'scoring' && gs.phase !== 'scoring') {
           setShowScoringModal(false);
           setIsScoringInProgress(false);
+          if (preScoringStateRef.current) {
+            const earnings = preScoringStateRef.current.players.map((p) => {
+              const nextP = gs.players.find((np) => np.id === p.id)!;
+              return { name: p.name, color: p.color, earned: nextP.totalMoney - p.totalMoney, totalMoney: nextP.totalMoney };
+            });
+            setRoundEarnings(earnings);
+            preScoringStateRef.current = null;
+          }
         }
         return gs;
       });
@@ -136,9 +147,16 @@ export default function OnlineGamePage() {
   const handleScoring = useCallback(async () => {
     if (!gameState || gameState.phase !== 'scoring' || isScoringInProgress) return;
     setIsScoringInProgress(true);
+    const preScoringGs = gameState;
     const next = scoreRound(gameState);
     setGame(next);
     setShowScoringModal(false);
+    const earnings = preScoringGs.players.map((p) => {
+      const nextP = next.players.find((np) => np.id === p.id)!;
+      return { name: p.name, color: p.color, earned: nextP.totalMoney - p.totalMoney, totalMoney: nextP.totalMoney };
+    });
+    setRoundEarnings(earnings);
+    preScoringStateRef.current = null;
     try {
       await updateGameState(code, next);
     } catch {
@@ -387,6 +405,41 @@ export default function OnlineGamePage() {
           playerName={currentPlayer.name}
           onClose={() => setShowRollModal(false)}
         />
+      )}
+
+      {/* Earnings Modal */}
+      {roundEarnings && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-[#1a1a2e] border border-amber-400/30 rounded-3xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
+            <div className="text-5xl mb-4">💰</div>
+            <h2 className="text-2xl font-black gold-text mb-2">이번 라운드 수익</h2>
+            <div className="space-y-2 mb-6">
+              {[...roundEarnings]
+                .sort((a, b) => b.earned - a.earned)
+                .map((p) => {
+                  const pcc = getColorClasses(p.color);
+                  return (
+                    <div key={p.name} className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-3">
+                      <span className={`w-3 h-3 rounded-full flex-shrink-0 ${pcc.bg}`} />
+                      <span className="flex-1 font-bold text-white/80 text-sm text-left truncate">{p.name}</span>
+                      <span className={`font-black text-sm ${p.earned > 0 ? 'text-emerald-400' : 'text-white/30'}`}>
+                        {p.earned > 0 ? `+${(p.earned / 10000).toFixed(0)}만원` : '−'}
+                      </span>
+                      <span className="text-amber-400 text-xs font-bold">
+                        합계 {(p.totalMoney / 10000).toFixed(0)}만
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+            <button
+              onClick={() => setRoundEarnings(null)}
+              className="w-full py-3 rounded-2xl font-black text-black bg-amber-400 hover:bg-amber-300 transition-all hover:scale-105"
+            >
+              확인
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Scoring Modal */}
